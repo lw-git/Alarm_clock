@@ -1,5 +1,6 @@
 import tkinter as tk
 import datetime
+import math
 
 
 class Application(tk.Frame):
@@ -39,7 +40,25 @@ class Application(tk.Frame):
         self.first_render()
 
     def first_render(self):
-        pass
+        x = [335, 400, 410, 390, 330, 250, 170, 110, 90, 100, 165, 250]
+        y = [55, 115, 200, 280, 340, 360, 340, 280, 200, 115, 55, 30]
+        for i in range(12):
+            self.canvas.create_text(x[i], y[i], text=str(i + 1),
+                                    justify=tk.CENTER, font="Consolas 14")
+
+        self.create_new_line(250, 200, 150, 5, self.angle2, id=2)
+        self.create_new_line(250, 200, 80, 9, self.angle3, id=3)
+        self.create_new_line(250, 200, 150, 3, self.angle, color='red')
+
+        self.canvas.create_oval(244, 194, 256, 206, fill='black')
+
+    def create_new_line(self, x1, y1, length, width,
+                        angle_, color='black', id=''):
+        angle = math.radians(angle_)
+        end_x = x1 + length * math.cos(angle)
+        end_y = y1 + length * math.sin(angle)
+        setattr(self, 'id' + str(id), self.canvas.create_line(
+            x1, y1, end_x, end_y, width=width, fill=color))
 
 
 if __name__ == '__main__':
