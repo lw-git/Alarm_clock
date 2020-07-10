@@ -36,9 +36,26 @@ class Application(tk.Frame):
         self.sound_button.pack()
         self.alarm_button.pack()
 
-        # --------------------Render-----------------------------
+        # --------------------First and start---------------------
         self.first_render()
+        self.tick()
 
+    # ----------------------Time methods----------------------------
+    def do_tick(self):
+        self.time += datetime.timedelta(seconds=1)
+        self.tick()
+
+    def tick(self):
+        hours = self.time.hour
+        hours = int(hours) % 12
+        self.angle = int(self.time.second) * 6 - 90
+        self.angle2 = int(self.time.minute) * 6 - 90
+        self.angle3 = int(self.time.hour) * 30 - 90 \
+            + (int(self.time.minute) // 2)
+        self.render()
+        self.canvas.after(1000, self.do_tick)
+
+    # --------------------Render methods----------------------------
     def first_render(self):
         x = [335, 400, 410, 390, 330, 250, 170, 110, 90, 100, 165, 250]
         y = [55, 115, 200, 280, 340, 360, 340, 280, 200, 115, 55, 30]
@@ -50,6 +67,16 @@ class Application(tk.Frame):
         self.create_new_line(250, 200, 80, 9, self.angle3, id=3)
         self.create_new_line(250, 200, 150, 3, self.angle, color='red')
 
+        self.canvas.create_oval(244, 194, 256, 206, fill='black')
+
+    def render(self):
+        self.canvas.delete(self.id)
+        self.canvas.delete(self.id2)
+        self.canvas.delete(self.id3)
+
+        self.create_new_line(250, 200, 150, 5, self.angle2, id=2)
+        self.create_new_line(250, 200, 80, 9, self.angle3, id=3)
+        self.create_new_line(250, 200, 150, 3, self.angle, color='red')
         self.canvas.create_oval(244, 194, 256, 206, fill='black')
 
     def create_new_line(self, x1, y1, length, width,
