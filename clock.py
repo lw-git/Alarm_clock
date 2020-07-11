@@ -15,7 +15,9 @@ class Application(tk.Frame):
         self.id = 0
         self.id2 = 0
         self.id3 = 0
-        self.center = {'x': 250, 'y': 200}
+        self.x = 250
+        self.y = 200
+        self.clock_size = 170
         self.time = datetime.datetime.now()
         self.sound = False
         self.alarm = False
@@ -36,56 +38,65 @@ class Application(tk.Frame):
         self.sound_button.pack()
         self.alarm_button.pack()
 
-        # --------------------First and start---------------------
+        # ---------------First render and start------------------
         self.first_render()
         self.tick()
 
+    # ---------------------Service methods--------------------------
+    def get_position(self, angle):
+        _angle = math.radians(angle)
+        x = self.x + self.clock_size * math.cos(_angle)
+        y = self.y + self.clock_size * math.sin(_angle)
+        return x, y
+
     # ----------------------Time methods----------------------------
+    def set_angle(self):
+        self.angle = int(self.time.second) * 6 - 90
+        self.angle2 = int(self.time.minute) * 6 - 90
+        self.angle3 = int(self.time.hour) * 30 - 90 \
+            + (int(self.time.minute) // 2)
+
     def do_tick(self):
         self.time += datetime.timedelta(seconds=1)
         self.tick()
 
     def tick(self):
-        hours = self.time.hour
-        hours = int(hours) % 12
-        self.angle = int(self.time.second) * 6 - 90
-        self.angle2 = int(self.time.minute) * 6 - 90
-        self.angle3 = int(self.time.hour) * 30 - 90 \
-            + (int(self.time.minute) // 2)
+        self.set_angle()
         self.render()
         self.canvas.after(1000, self.do_tick)
 
     # --------------------Render methods----------------------------
     def first_render(self):
-        x = [335, 400, 410, 390, 330, 250, 170, 110, 90, 100, 165, 250]
-        y = [55, 115, 200, 280, 340, 360, 340, 280, 200, 115, 55, 30]
-        for i in range(12):
-            self.canvas.create_text(x[i], y[i], text=str(i + 1),
-                                    justify=tk.CENTER, font="Consolas 14")
+        for i, angle in enumerate(range(-60, 300, 30)):
+            x, y = self.get_position(angle)
+            self.canvas.create_text(
+                x, y, text=str(i + 1), justify=tk.CENTER, font="Consolas 14")
 
-        self.create_new_line(250, 200, 150, 5, self.angle2, id=2)
-        self.create_new_line(250, 200, 80, 9, self.angle3, id=3)
-        self.create_new_line(250, 200, 150, 3, self.angle, color='red')
+        self.create_new_line(150, 5, self.angle2, id=2)
+        self.create_new_line(80, 9, self.angle3, id=3)
+        self.create_new_line(150, 3, self.angle, color='red')
 
-        self.canvas.create_oval(244, 194, 256, 206, fill='black')
+        self.canvas.create_oval(self.x - 6, self.y - 6, self.x + 6,
+                                self.y + 6, fill='black')
 
     def render(self):
         self.canvas.delete(self.id)
         self.canvas.delete(self.id2)
         self.canvas.delete(self.id3)
 
-        self.create_new_line(250, 200, 150, 5, self.angle2, id=2)
-        self.create_new_line(250, 200, 80, 9, self.angle3, id=3)
-        self.create_new_line(250, 200, 150, 3, self.angle, color='red')
-        self.canvas.create_oval(244, 194, 256, 206, fill='black')
+        self.create_new_line(150, 5, self.angle2, id=2)
+        self.create_new_line(80, 9, self.angle3, id=3)
+        self.create_new_line(150, 3, self.angle, color='red')
+        self.canvas.create_oval(self.x - 6, self.y - 6, self.x + 6,
+                                self.y + 6, fill='black')
 
-    def create_new_line(self, x1, y1, length, width,
+    def create_new_line(self, length, width,
                         angle_, color='black', id=''):
         angle = math.radians(angle_)
-        end_x = x1 + length * math.cos(angle)
-        end_y = y1 + length * math.sin(angle)
+        end_x = self.x + length * math.cos(angle)
+        end_y = self.y + length * math.sin(angle)
         setattr(self, 'id' + str(id), self.canvas.create_line(
-            x1, y1, end_x, end_y, width=width, fill=color))
+            self.x, self.y, end_x, end_y, width=width, fill=color))
 
 
 if __name__ == '__main__':
