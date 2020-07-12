@@ -12,9 +12,12 @@ class Application(tk.Frame):
         self.angle = 0
         self.angle2 = 0
         self.angle3 = 0
+        self.angle4 = 90
         self.id = 0
         self.id2 = 0
         self.id3 = 0
+        self.id4 = 0
+        self.oval = 0
         self.x = 250
         self.y = 200
         self.clock_size = 170
@@ -25,6 +28,7 @@ class Application(tk.Frame):
 
         # ------------------Widgets------------------------------
         self.canvas = tk.Canvas(root, width=500, height=400, bg="white")
+        self.canvas.bind("<Button-1>", self.alarm_arrow)
         self.canvas.pack()
 
         self.sound_button = tk.Button(
@@ -49,6 +53,14 @@ class Application(tk.Frame):
         y = self.y + self.clock_size * math.sin(_angle)
         return x, y
 
+    # ----------------------Alarm methods---------------------------
+    def alarm_arrow(self, event):
+        radians = math.atan2(event.y - self.y, event.x - self.x)
+        self.angle4 = math.degrees(radians)
+        self.canvas.delete(self.id4)
+        self.create_new_line(150, 3, self.angle4, color='yellow', id=4)
+        self.create_oval()
+
     # ----------------------Time methods----------------------------
     def set_angle(self):
         self.angle = int(self.time.second) * 6 - 90
@@ -66,6 +78,11 @@ class Application(tk.Frame):
         self.canvas.after(1000, self.do_tick)
 
     # --------------------Render methods----------------------------
+    def create_oval(self):
+        self.canvas.delete(self.oval)
+        self.oval = self.canvas.create_oval(
+            self.x - 6, self.y - 6, self.x + 6, self.y + 6, fill='black')
+
     def first_render(self):
         for i, angle in enumerate(range(-60, 300, 30)):
             x, y = self.get_position(angle)
@@ -75,9 +92,8 @@ class Application(tk.Frame):
         self.create_new_line(150, 5, self.angle2, id=2)
         self.create_new_line(80, 9, self.angle3, id=3)
         self.create_new_line(150, 3, self.angle, color='red')
-
-        self.canvas.create_oval(self.x - 6, self.y - 6, self.x + 6,
-                                self.y + 6, fill='black')
+        self.create_new_line(150, 3, self.angle4, id=4, color='yellow')
+        self.create_oval()
 
     def render(self):
         self.canvas.delete(self.id)
@@ -87,11 +103,9 @@ class Application(tk.Frame):
         self.create_new_line(150, 5, self.angle2, id=2)
         self.create_new_line(80, 9, self.angle3, id=3)
         self.create_new_line(150, 3, self.angle, color='red')
-        self.canvas.create_oval(self.x - 6, self.y - 6, self.x + 6,
-                                self.y + 6, fill='black')
+        self.create_oval()
 
-    def create_new_line(self, length, width,
-                        angle_, color='black', id=''):
+    def create_new_line(self, length, width, angle_, color='black', id=''):
         angle = math.radians(angle_)
         end_x = self.x + length * math.cos(angle)
         end_y = self.y + length * math.sin(angle)
