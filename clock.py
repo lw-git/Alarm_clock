@@ -1,6 +1,7 @@
 import tkinter as tk
-import datetime
 import math
+from winsound import PlaySound, SND_FILENAME, SND_ASYNC
+import datetime
 
 
 class Application(tk.Frame):
@@ -33,7 +34,7 @@ class Application(tk.Frame):
 
         self.sound_button = tk.Button(
             text='Sound On',
-            font='Consolas 9', bg='white', command=None)
+            font='Consolas 9', bg='white', command=self.toggle_sound)
 
         self.alarm_button = tk.Button(
             text='Alarm On',
@@ -52,6 +53,12 @@ class Application(tk.Frame):
         x = self.x + self.clock_size * math.cos(_angle)
         y = self.y + self.clock_size * math.sin(_angle)
         return x, y
+
+    def toggle_sound(self):
+        self.sound = not self.sound
+        text = 'Sound On' \
+            if self.sound_button['text'] == 'Sound Off' else 'Sound Off'
+        self.sound_button.config(text=text)
 
     # ----------------------Alarm methods---------------------------
     def alarm_arrow(self, event):
@@ -77,6 +84,9 @@ class Application(tk.Frame):
         self.render()
         self.canvas.after(1000, self.do_tick)
 
+        if self.sound:
+            PlaySound("tick.wav", SND_FILENAME | SND_ASYNC)
+
     # --------------------Render methods----------------------------
     def create_oval(self):
         self.canvas.delete(self.oval)
@@ -87,7 +97,7 @@ class Application(tk.Frame):
         for i, angle in enumerate(range(-60, 300, 30)):
             x, y = self.get_position(angle)
             self.canvas.create_text(
-                x, y, text=str(i + 1), justify=tk.CENTER, font="Consolas 14")
+                x, y, text=str(i + 1), justify=tk.CENTER, font="Consolas 25")
 
         self.create_new_line(150, 5, self.angle2, id=2)
         self.create_new_line(80, 9, self.angle3, id=3)
