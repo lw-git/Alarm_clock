@@ -1,6 +1,6 @@
 import tkinter as tk
 import math
-from winsound import PlaySound, SND_FILENAME, SND_ASYNC
+from winsound import PlaySound, SND_FILENAME, SND_ASYNC, SND_LOOP, SND_PURGE
 import datetime
 
 
@@ -38,7 +38,7 @@ class Application(tk.Frame):
 
         self.alarm_button = tk.Button(
             text='Alarm On',
-            font='Consolas 9', bg='white', command=None)
+            font='Consolas 9', bg='white', command=self.toggle_alarm)
 
         self.sound_button.pack()
         self.alarm_button.pack()
@@ -59,6 +59,14 @@ class Application(tk.Frame):
         text = 'Sound On' \
             if self.sound_button['text'] == 'Sound Off' else 'Sound Off'
         self.sound_button.config(text=text)
+
+    def toggle_alarm(self):
+        self.alarm = not self.alarm
+        text = 'Alarm On' \
+            if self.alarm_button['text'] == 'Alarm Off' else 'Alarm Off'
+        self.alarm_button.config(text=text)
+        self.is_alarm = False
+        PlaySound(None, SND_PURGE)
 
     # ----------------------Alarm methods---------------------------
     def alarm_arrow(self, event):
@@ -86,6 +94,16 @@ class Application(tk.Frame):
 
         if self.sound:
             PlaySound("tick.wav", SND_FILENAME | SND_ASYNC)
+
+        if self.alarm and not self.is_alarm:
+            test_angle = int(self.angle4 if self.angle4 >= 0
+                             else self.angle4 + 360)
+
+            if test_angle == self.angle3 % 360:
+                self.is_alarm = True
+
+        if self.is_alarm:
+            PlaySound("alarm.wav", SND_FILENAME | SND_LOOP | SND_ASYNC)
 
     # --------------------Render methods----------------------------
     def create_oval(self):
