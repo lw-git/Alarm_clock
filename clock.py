@@ -239,6 +239,10 @@ class Application(tk.Frame):
             self.canvas.create_text(
                 x, y, text=str(i + 1), justify=tk.CENTER, font="Consolas 25")
 
+        self.time_string = self.canvas.create_text(
+            120, 455, text=self.time.strftime('%H:%M:%S'),
+            justify=tk.CENTER, font="Consolas 18")
+
         self.create_new_line(150, 5, self.angle2, id=2)
         self.create_new_line(80, 9, self.angle3, id=3)
         self.create_new_line(150, 3, self.angle, color='red')
@@ -253,6 +257,9 @@ class Application(tk.Frame):
         self.create_new_line(80, 9, self.angle3, id=3)
         self.create_new_line(150, 3, self.angle, color='red')
         self.create_oval()
+
+        self.canvas.itemconfigure(self.time_string,
+                                  text=self.time.strftime('%H:%M:%S'))
 
     def create_new_line(self, length, width, angle_, color='black', id=''):
         angle = math.radians(angle_)
