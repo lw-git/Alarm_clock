@@ -111,10 +111,10 @@ class Application(tk.Frame):
         self.x = int(self.canvas['width']) // 2
         self.y = (int(self.canvas['height']) - self.panel) // 2
 
-    def get_position(self, angle):
+    def get_position(self, angle, delta=0):
         _angle = math.radians(angle)
-        x = self.x + self.clock_size * math.cos(_angle)
-        y = self.y + self.clock_size * math.sin(_angle)
+        x = self.x + (self.clock_size + delta) * math.cos(_angle)
+        y = self.y + (self.clock_size + delta) * math.sin(_angle)
         return x, y
 
     def toggle_sound(self, event):
@@ -167,7 +167,7 @@ class Application(tk.Frame):
         radians = math.atan2(event.y - self.y, event.x - self.x)
         self.angle4 = math.degrees(radians)
         self.canvas.delete(self.id4)
-        self.create_new_line(150, 3, self.angle4, color='yellow', id=4)
+        self.create_new_line(130, 3, self.angle4, color='yellow', id=4)
         self.create_oval()
         self.calculate_alarm_time()
 
@@ -195,7 +195,7 @@ class Application(tk.Frame):
         self.oldMinutes = '{:0>2}'.format(self.minutes.get())
 
         self.canvas.delete(self.id4)
-        self.create_new_line(150, 3, self.angle4, color='yellow', id=4)
+        self.create_new_line(130, 3, self.angle4, color='yellow', id=4)
         root.focus()
 
     # ----------------------Time methods----------------------------
@@ -234,18 +234,27 @@ class Application(tk.Frame):
             self.x - 6, self.y - 6, self.x + 6, self.y + 6, fill='black')
 
     def first_render(self):
-        for i, angle in enumerate(range(-60, 300, 30)):
-            x, y = self.get_position(angle)
-            self.canvas.create_text(
-                x, y, text=str(i + 1), justify=tk.CENTER, font="Consolas 25")
+        hours = 0
+        for i, angle in enumerate(range(-60, 300, 6)):
+            if abs(angle) % 30 == 0:
+                x, y = self.get_position(angle)
+                x1, y1 = self.get_position(angle, delta=-30)
+                x2, y2 = self.get_position(angle, delta=-35)
+                self.canvas.create_text(x, y, text=str(hours + 1),
+                                        justify=tk.CENTER, font="Consolas 25")
+                hours += 1
+                self.canvas.create_line(x1, y1, x2, y2, width=3)
+
+            x, y = self.get_position(angle, delta=-30)
+            self.canvas.create_oval(x - 1, y - 1, x + 1, y + 1, fill='black')
 
         self.time_string = self.canvas.create_text(
             120, 455, text=self.time.strftime('%H:%M:%S'),
             justify=tk.CENTER, font="Consolas 18")
 
-        self.create_new_line(150, 5, self.angle2, id=2)
-        self.create_new_line(80, 9, self.angle3, id=3)
-        self.create_new_line(150, 3, self.angle, color='red')
+        self.create_new_line(130, 5, self.angle2, id=2)
+        self.create_new_line(70, 9, self.angle3, id=3)
+        self.create_new_line(130, 3, self.angle, color='red')
         self.create_oval()
 
     def render(self):
@@ -253,9 +262,9 @@ class Application(tk.Frame):
         self.canvas.delete(self.id2)
         self.canvas.delete(self.id3)
 
-        self.create_new_line(150, 5, self.angle2, id=2)
-        self.create_new_line(80, 9, self.angle3, id=3)
-        self.create_new_line(150, 3, self.angle, color='red')
+        self.create_new_line(130, 5, self.angle2, id=2)
+        self.create_new_line(70, 9, self.angle3, id=3)
+        self.create_new_line(130, 3, self.angle, color='red')
         self.create_oval()
 
         self.canvas.itemconfigure(self.time_string,
