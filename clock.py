@@ -4,27 +4,163 @@ from winsound import PlaySound, SND_FILENAME, SND_ASYNC, SND_LOOP, SND_PURGE
 import datetime
 
 
+class Element():
+    def __init__(self, params):
+        self.canvas = params['canvas']
+        self.size = params['size']
+        self.panel = params['panel']
+        self.calculate_center()
+        self.id = 0
+
+    # ----------------------Service Methods-----------------------
+    def calculate_center(self):
+        self.x = int(self.canvas['width']) // 2
+        self.y = (int(self.canvas['height']) - self.panel) // 2
+
+    def get_position(self, angle, length):
+        _angle = math.radians(angle)
+        x = self.x + length * math.cos(_angle)
+        y = self.y + length * math.sin(_angle)
+        return x, y
+
+    def do_resize(self, new_size, canvas):
+        self.size = new_size
+        self.canvas = canvas
+        self.calculate_center()
+        self.resize()
+
+    # -----------------------Abstract Methods---------------------
+    def create(self):
+        pass
+
+    def render(self):
+        pass
+
+
+class Line(Element):
+    def __init__(self, params, **kwargs):
+        super().__init__(params)
+        self.angle = kwargs.get('angle') or 0
+        self.mult = kwargs.get('mult') or 0
+        self.length = self.calculate_length()
+        self.delta = kwargs.get('delta')
+        self.width = kwargs['width']
+        self.color = kwargs.get('color') or 'black'
+        self.create()
+
+    def calculate_length(self):
+        return self.size * self.mult
+
+    def get_coords(self):
+        if self.delta is None:
+            x2, y2 = self.get_position(self.angle, self.length)
+            return self.x, self.y, x2, y2
+        x1, y1 = self.get_position(self.angle, self.size - self.delta)
+        x2, y2 = self.get_position(self.angle, self.size - self.delta - 5)
+        return x1, y1, x2, y2
+
+    def create(self):
+        self.id = self.canvas.create_line(
+            self.get_coords(), width=self.width, fill=self.color)
+
+    def render(self):
+        if self.delta is None:
+            self.canvas.coords(self.id, self.get_coords())
+
+
+class Oval(Element):
+    def __init__(self, params, **kwargs):
+        super().__init__(params)
+        self.width = kwargs.get('width')
+        self.color = kwargs.get('color') or 'black'
+        self.angle = kwargs.get('angle')
+        self.delta = kwargs.get('delta') or 0
+        self.create()
+
+    def create(self):
+        if self.angle is None:
+            self.id = self.canvas.create_oval(
+                self.x - self.width, self.y - self.width,
+                self.x + self.width, self.y + self.width, fill=self.color)
+        else:
+            x, y = self.get_position(self.angle, self.size - self.delta)
+            self.id = self.canvas.create_oval(
+                x - self.width, y - self.width,
+                x + self.width, y + self.width, fill=self.color)
+
+
+class Text(Element):
+    def __init__(self, params, **kwargs):
+        super().__init__(params)
+        self.is_time = kwargs.get('is_time') or False
+        self.angle = kwargs.get('angle')
+        self.text = kwargs.get('text')
+        self.x1 = kwargs.get('x1') or 0
+        self.y1 = kwargs.get('y1') or 0
+        self.delta = kwargs.get('delta') or 0
+        self.create()
+
+    def create(self):
+        if not self.is_time:
+            x, y = self.get_position(self.angle, self.size + self.delta)
+            self.id = self.canvas.create_text(
+                x, y, text=self.text, justify=tk.CENTER, font="Consolas 25")
+        else:
+            self.id = self.canvas.create_text(
+                self.x1, self.y1, text=self.text,
+                justify=tk.CENTER, font="Consolas 18")
+
+    def render(self):
+        if self.is_time:
+            self.canvas.itemconfigure(self.id, text=self.text)
+
+
+class Widget(Element):
+    def __init__(self, params, **kwargs):
+        super().__init__(params)
+        self.type_ = kwargs.get('type') or 'image'
+        self.width = kwargs.get('width') or 0
+        self.x1 = kwargs.get('x1')
+        self.y1 = kwargs.get('y1')
+        self.left = kwargs.get('left') or False
+        self.get_deltas()
+        self.widget = kwargs.get('widget')
+        self.create()
+
+    def get_deltas(self):
+        if self.x1 is None or self.y1 is None:
+            return
+        if self.left:
+            self.deltaX = self.x1
+        else:
+            self.deltaX = self.x * 2 - self.x1
+        self.deltaY = self.y * 2 - self.y1
+
+    def create(self):
+        if self.type_ == 'rect':
+            self.id = self.canvas.create_rectangle(
+                5, 5, self.x * 2 - 5, self.y * 2 - 5, width=self.width)
+
+        elif self.type_ == 'window':
+            self.id = self.canvas.create_window(
+                self.x1, self.y1, window=self.widget)
+        else:
+            self.id = self.canvas.create_image(
+                self.x1, self.y1, image=self.widget)
+
+
 class Application(tk.Frame):
 
     def __init__(self, *args, **kwargs):
         tk.Frame.__init__(self, *args, **kwargs)
 
         # -----------------Variables-----------------------------
-        self.angle = 0
-        self.angle2 = 0
-        self.angle3 = 0
-        self.angle4 = 90
-        self.id = 0
-        self.id2 = 0
-        self.id3 = 0
-        self.id4 = 0
-        self.oval = 0
         self.clock_size = 170
+        self.panel = 55
         self.time = datetime.datetime.now()
         self.sound = False
         self.alarm = False
         self.is_alarm = False
-        self.panel = 55
         self.oldHours = '00'
         self.oldMinutes = '00'
         self.hours = tk.StringVar()
@@ -36,7 +172,6 @@ class Application(tk.Frame):
                                 bg="white")
         self.canvas.bind("<Button-1>", self.set_alarm_by_arrow)
         self.canvas.pack()
-        self.calculate_center()
 
         self.canvas.mute = tk.PhotoImage(data='''R0lGODlhMgAyAPAAAAAAAAAAACH5BAEAAAAALAAAAAAyADIAAALVhI+py+0Po5y02ouz3lyFH3QZ+IkXWTqgeaDpQjZv5YaJy6An3vKeP6kZaracjsYTqo4UJVAWQx6ZwxUiCo06rT1udXbbTs
         FAbJj41RavZnMXDXAaue40XJlde99EG37OBhbXp0b181JHOGYYWJSoWFjXFXgImfL3Rnlmefk0iLj3ydlpiPU4avXndYpKGqm52eqXpBcqKjs71TiHy0dm6zvaSCcJARnrOkJYmbqG0QfjqQHH
@@ -76,17 +211,6 @@ class Application(tk.Frame):
         +UjJN7GuDNSAZMJA0JtrBix0ZESEq1hrIRrV\ncHsN1zVsfrM1awY4AUNGRVzAWOxCMWMYjRdLhvzYMWXKim2IKcet86IdbrFlS6DBc6Kd4XyaPnSF\n5ysDOFYjigHvFgXOssWkGDDKmYUouX0JYg
         KDRAoewZMrX858eSAAOw==''')
 
-        self.btn_sound = self.canvas.create_image(
-            35, self.y * 2 + 30, image=self.canvas.sound)
-        self.btn_alarm = self.canvas.create_image(
-            self.x * 2 - 135, self.y * 2 + 30, image=self.canvas.alarm_on)
-
-        self.canvas.tag_bind(self.btn_sound, "<Button-1>", self.toggle_sound)
-        self.canvas.tag_bind(self.btn_alarm, "<Button-1>", self.toggle_alarm)
-
-        self.canvas.create_rectangle(
-            5, 5, self.x * 2 - 5, self.y * 2 - 5, width=2)
-
         self.s1 = tk.Spinbox(self.canvas, font="Consolas 20",
                              width=2, values=self.get_values(12), wrap=True,
                              textvariable=self.hours)
@@ -94,16 +218,63 @@ class Application(tk.Frame):
                              width=2, values=self.get_values(60), wrap=True,
                              textvariable=self.minutes)
 
-        self.canvas.create_window(340, 450, window=self.s1)
-        self.canvas.create_window(390, 450, window=self.s2)
+        # -------------------Elements----------------------------
+        self.params = {'canvas': self.canvas,
+                       'size': self.clock_size,
+                       'panel': self.panel}
+
+        self.arrow3 = Line(self.params, mult=0.5, width=9)
+        self.arrow2 = Line(self.params, mult=0.8, width=5)
+        self.arrow4 = Line(self.params, mult=0.8, width=3, color='yellow',
+                           angle=90)
+        self.arrow1 = Line(self.params, mult=0.8, width=3, color='red')
 
         self.hours.trace('w', lambda *args: self.set_alarm_by_time())
         self.minutes.trace('w', lambda *args: self.set_alarm_by_time())
         self.hours.set('06')
         self.minutes.set('00')
 
-        # ---------------First render and start------------------
-        self.first_render()
+        self.time_string = Text(self.params, is_time=True,
+                                text=self.time.strftime('%H:%M:%S'),
+                                x1=120, y1=450)
+
+        self.btn_sound = Widget(self.params, x1=35, y1=450,
+                                widget=self.canvas.sound, left=True)
+        self.btn_alarm = Widget(self.params, x1=290, y1=450,
+                                widget=self.canvas.alarm_on)
+
+        self.canvas.tag_bind(self.btn_sound.id, "<Button-1>",
+                             self.toggle_sound)
+        self.canvas.tag_bind(self.btn_alarm.id, "<Button-1>",
+                             self.toggle_alarm)
+
+        self.elems = [self.arrow3, self.arrow2, self.arrow4, self.arrow1,
+                      self.time_string, self.btn_sound, self.btn_alarm]
+
+        ids = []
+        ids.append(Oval(self.params, width=6))
+        ids.append(Widget(self.params, type='rect', width=2))
+
+        hours = 0
+        for i, angle in enumerate(range(-60, 300, 6)):
+            if abs(angle) % 30 == 0:
+                ids.append(Text(self.params, angle=angle,
+                                text=str(hours + 1), delta=10))
+                hours += 1
+                ids.append(Line(self.params, angle=angle, width=3, delta=30))
+
+            ids.append(Oval(self.params, angle=angle, width=1,
+                            delta=30))
+
+        ids.append(Widget(self.params, x1=340, y1=450, widget=self.s1,
+                          type='window'))
+        ids.append(Widget(self.params, x1=390, y1=450, widget=self.s2,
+                          type='window'))
+
+        self.elems += ids
+
+        # -------------------------Start----------------------------
+        self.calculate_center()
         self.tick()
 
     # ---------------------Service methods--------------------------
@@ -111,26 +282,20 @@ class Application(tk.Frame):
         self.x = int(self.canvas['width']) // 2
         self.y = (int(self.canvas['height']) - self.panel) // 2
 
-    def get_position(self, angle, delta=0):
-        _angle = math.radians(angle)
-        x = self.x + (self.clock_size + delta) * math.cos(_angle)
-        y = self.y + (self.clock_size + delta) * math.sin(_angle)
-        return x, y
-
     def toggle_sound(self, event):
         self.sound = not self.sound
         if self.sound:
-            self.canvas.itemconfig(self.btn_sound, image=self.canvas.mute)
+            self.canvas.itemconfig(self.btn_sound.id, image=self.canvas.mute)
         else:
-            self.canvas.itemconfig(self.btn_sound, image=self.canvas.sound)
+            self.canvas.itemconfig(self.btn_sound.id, image=self.canvas.sound)
 
     def toggle_alarm(self, event):
         self.alarm = not self.alarm
         if self.alarm:
-            self.canvas.itemconfig(self.btn_alarm,
+            self.canvas.itemconfig(self.btn_alarm.id,
                                    image=self.canvas.alarm_off)
         else:
-            self.canvas.itemconfig(self.btn_alarm,
+            self.canvas.itemconfig(self.btn_alarm.id,
                                    image=self.canvas.alarm_on)
         if self.is_alarm:
             self.is_alarm = False
@@ -160,26 +325,7 @@ class Application(tk.Frame):
         if int(self.minutes.get()[:2]) > 59:
             self.minutes.set(self.oldMinutes)
 
-    # ----------------------Alarm methods---------------------------
-    def set_alarm_by_arrow(self, event):
-        if event.y >= self.y * 2 - 5:
-            return
-        radians = math.atan2(event.y - self.y, event.x - self.x)
-        self.angle4 = math.degrees(radians)
-        self.canvas.delete(self.id4)
-        self.create_new_line(130, 3, self.angle4, color='yellow', id=4)
-        self.create_oval()
-        self.calculate_alarm_time()
-
-    def calculate_alarm_time(self):
-        angle = self.angle4 + 90
-        time_ = (angle if angle >= 0 else 360 + angle) / 30
-        hours = int(time_)
-        minutes = time_ - int(time_)
-
-        self.hours.set('{:0>2}'.format(str(hours)))
-        self.minutes.set('{:0>2}'.format(str(int(60 * minutes))))
-
+    # ---------------------Alarm methods------------------------
     def set_alarm_by_time(self):
         self.validate_time()
         try:
@@ -190,19 +336,40 @@ class Application(tk.Frame):
             minutes = int(self.minutes.get()) // 2
         except ValueError:
             minutes = 0
-        self.angle4 = hours % 12 * 30 - 90 + minutes
+        self.arrow4.angle = hours % 12 * 30 - 90 + minutes
         self.oldHours = '{:0>2}'.format(self.hours.get())
         self.oldMinutes = '{:0>2}'.format(self.minutes.get())
 
-        self.canvas.delete(self.id4)
-        self.create_new_line(130, 3, self.angle4, color='yellow', id=4)
+        self.arrow4.render()
         root.focus()
+
+    def check_area(self, y):
+        if y >= self.y * 2 - 5:
+            return False
+        return True
+
+    def set_alarm_by_arrow(self, event):
+        if self.check_area(event.y):
+            radians = math.atan2(event.y - self.y, event.x - self.x)
+            self.arrow4.angle = math.degrees(radians)
+
+            self.arrow4.render()
+            self.calculate_alarm_time()
+
+    def calculate_alarm_time(self):
+        angle = self.arrow4.angle + 90
+        time_ = (angle if angle >= 0 else 360 + angle) / 30
+        hours = int(time_)
+        minutes = time_ - int(time_)
+
+        self.hours.set('{:0>2}'.format(str(hours)))
+        self.minutes.set('{:0>2}'.format(str(int(60 * minutes))))
 
     # ----------------------Time methods----------------------------
     def set_angle(self):
-        self.angle = int(self.time.second) * 6 - 90
-        self.angle2 = int(self.time.minute) * 6 - 90
-        self.angle3 = int(self.time.hour) * 30 - 90 \
+        self.arrow1.angle = int(self.time.second) * 6 - 90
+        self.arrow2.angle = int(self.time.minute) * 6 - 90
+        self.arrow3.angle = int(self.time.hour) * 30 - 90 \
             + (int(self.time.minute) // 2)
 
     def do_tick(self):
@@ -211,6 +378,7 @@ class Application(tk.Frame):
 
     def tick(self):
         self.set_angle()
+        self.time_string.text = self.time.strftime('%H:%M:%S')
         self.render()
         self.canvas.after(1000, self.do_tick)
 
@@ -218,69 +386,24 @@ class Application(tk.Frame):
             PlaySound("tick.wav", SND_FILENAME | SND_ASYNC)
 
         if self.alarm and not self.is_alarm:
-            test_angle = int(self.angle4 if self.angle4 >= 0
-                             else self.angle4 + 360)
+            test_angle = int(self.arrow4.angle
+                if self.arrow4.angle >= 0 else self.arrow4.angle + 360)
 
-            if test_angle == self.angle3 % 360:
+            if test_angle == self.arrow3.angle % 360:
                 self.is_alarm = True
 
         if self.is_alarm:
             PlaySound("alarm.wav", SND_FILENAME | SND_LOOP | SND_ASYNC)
 
-    # --------------------Render methods----------------------------
-    def create_oval(self):
-        self.canvas.delete(self.oval)
-        self.oval = self.canvas.create_oval(
-            self.x - 6, self.y - 6, self.x + 6, self.y + 6, fill='black')
-
-    def first_render(self):
-        hours = 0
-        for i, angle in enumerate(range(-60, 300, 6)):
-            if abs(angle) % 30 == 0:
-                x, y = self.get_position(angle)
-                x1, y1 = self.get_position(angle, delta=-30)
-                x2, y2 = self.get_position(angle, delta=-35)
-                self.canvas.create_text(x, y, text=str(hours + 1),
-                                        justify=tk.CENTER, font="Consolas 25")
-                hours += 1
-                self.canvas.create_line(x1, y1, x2, y2, width=3)
-
-            x, y = self.get_position(angle, delta=-30)
-            self.canvas.create_oval(x - 1, y - 1, x + 1, y + 1, fill='black')
-
-        self.time_string = self.canvas.create_text(
-            120, 455, text=self.time.strftime('%H:%M:%S'),
-            justify=tk.CENTER, font="Consolas 18")
-
-        self.create_new_line(130, 5, self.angle2, id=2)
-        self.create_new_line(70, 9, self.angle3, id=3)
-        self.create_new_line(130, 3, self.angle, color='red')
-        self.create_oval()
-
+    # --------------------Render method----------------------------
     def render(self):
-        self.canvas.delete(self.id)
-        self.canvas.delete(self.id2)
-        self.canvas.delete(self.id3)
-
-        self.create_new_line(130, 5, self.angle2, id=2)
-        self.create_new_line(70, 9, self.angle3, id=3)
-        self.create_new_line(130, 3, self.angle, color='red')
-        self.create_oval()
-
-        self.canvas.itemconfigure(self.time_string,
-                                  text=self.time.strftime('%H:%M:%S'))
-
-    def create_new_line(self, length, width, angle_, color='black', id=''):
-        angle = math.radians(angle_)
-        end_x = self.x + length * math.cos(angle)
-        end_y = self.y + length * math.sin(angle)
-        setattr(self, 'id' + str(id), self.canvas.create_line(
-            self.x, self.y, end_x, end_y, width=width, fill=color))
+        for elem in self.elems:
+            elem.render()
 
 
 if __name__ == '__main__':
     root = tk.Tk()
-    root.title('Clock')
+    root.title('Alarm Clock')
     root.resizable(False, False)
     Application(root)
     root.mainloop()
