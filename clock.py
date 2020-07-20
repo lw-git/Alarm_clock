@@ -36,6 +36,9 @@ class Element():
     def render(self):
         pass
 
+    def resize(self):
+        pass
+
 
 class Line(Element):
     def __init__(self, params, **kwargs):
@@ -211,12 +214,19 @@ class Application(tk.Frame):
         +UjJN7GuDNSAZMJA0JtrBix0ZESEq1hrIRrV\ncHsN1zVsfrM1awY4AUNGRVzAWOxCMWMYjRdLhvzYMWXKim2IKcet86IdbrFlS6DBc6Kd4XyaPnSF\n5ysDOFYjigHvFgXOssWkGDDKmYUouX0JYg
         KDRAoewZMrX858eSAAOw==''')
 
+        self.canvas.up = tk.PhotoImage(data='''R0lGODlhMgAyAPAAAAAAAAAAACH5BAEAAAAALAAAAAAyADIAAAJZhI+py+0Po5y02ouz3rz7D4bi\nSJbmiabqyrZRELgJDMsGTcs43u776vOlhABiyVj8kZA3ZYh5gG6kUSeHisBWrA6uJjcBf2
+        Jbm/mM\nTqvX7Lb7DY/L5/T6qAAAOw==''')
+
+        self.canvas.down = tk.PhotoImage(data='''R0lGODlhMgAyAPAAAAAAAAAAACH5BAEAAAAALAAAAAAyADIAAAJYhI+py+0Po5y02ouz3rz7D4bi\nSJbmiabqyrYuFFgxGNRUPXe4He355vsxgh9iw1j0DZUi5MEZckKbzOkoaCVhca3tK5vavR
+        C8sfmM\nTqvX7Lb7DY/L5/R0AQA7''')
+
         self.s1 = tk.Spinbox(self.canvas, font="Consolas 20",
                              width=2, values=self.get_values(12), wrap=True,
                              textvariable=self.hours)
         self.s2 = tk.Spinbox(self.canvas, font="Consolas 20",
                              width=2, values=self.get_values(60), wrap=True,
                              textvariable=self.minutes)
+
 
         # -------------------Elements----------------------------
         self.params = {'canvas': self.canvas,
@@ -243,13 +253,26 @@ class Application(tk.Frame):
         self.btn_alarm = Widget(self.params, x1=290, y1=450,
                                 widget=self.canvas.alarm_on)
 
+        self.btn_up = Widget(self.params, x1=230, y1=450,
+                             widget=self.canvas.up, left=True)
+        self.btn_down = Widget(self.params, x1=200, y1=450,
+                               widget=self.canvas.down, left=True)
+
         self.canvas.tag_bind(self.btn_sound.id, "<Button-1>",
                              self.toggle_sound)
         self.canvas.tag_bind(self.btn_alarm.id, "<Button-1>",
                              self.toggle_alarm)
 
+        self.canvas.tag_bind(self.btn_up.id, "<Button-1>",
+                             lambda event:
+                             self.change_size(self.clock_size + 10))
+        self.canvas.tag_bind(self.btn_down.id, "<Button-1>",
+                             lambda event:
+                             self.change_size(self.clock_size - 10))
+
         self.elems = [self.arrow3, self.arrow2, self.arrow4, self.arrow1,
-                      self.time_string, self.btn_sound, self.btn_alarm]
+                      self.time_string, self.btn_sound, self.btn_alarm,
+                      self.btn_up, self.btn_down]
 
         ids = []
         ids.append(Oval(self.params, width=6))
@@ -281,6 +304,9 @@ class Application(tk.Frame):
     def calculate_center(self):
         self.x = int(self.canvas['width']) // 2
         self.y = (int(self.canvas['height']) - self.panel) // 2
+
+    def change_size(self, size):
+        pass
 
     def toggle_sound(self, event):
         self.sound = not self.sound
