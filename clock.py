@@ -70,6 +70,11 @@ class Line(Element):
         if self.delta is None:
             self.canvas.coords(self.id, self.get_coords())
 
+    def resize(self):
+        if self.delta is None:
+            self.length = self.calculate_length()
+        self.canvas.coords(self.id, self.get_coords())
+
 
 class Oval(Element):
     def __init__(self, params, **kwargs):
@@ -90,6 +95,16 @@ class Oval(Element):
             self.id = self.canvas.create_oval(
                 x - self.width, y - self.width,
                 x + self.width, y + self.width, fill=self.color)
+
+    def resize(self):
+        if self.angle is None:
+            self.canvas.coords(self.id, self.x - self.width,
+                               self.y - self.width,
+                               self.x + self.width, self.y + self.width)
+        else:
+            x, y = self.get_position(self.angle, self.size - self.delta)
+            self.canvas.coords(self.id, x - self.width, y - self.width,
+                               x + self.width, y + self.width)
 
 
 class Text(Element):
@@ -116,6 +131,14 @@ class Text(Element):
     def render(self):
         if self.is_time:
             self.canvas.itemconfigure(self.id, text=self.text)
+
+    def resize(self):
+        if self.is_time:
+            y = self.y * 2 + (self.panel // 2)
+            self.canvas.coords(self.id, self.x1, y)
+        else:
+            x, y = self.get_position(self.angle, self.size)
+            self.canvas.coords(self.id, x, y)
 
 
 class Widget(Element):
@@ -150,6 +173,17 @@ class Widget(Element):
         else:
             self.id = self.canvas.create_image(
                 self.x1, self.y1, image=self.widget)
+
+    def resize(self):
+        if self.type_ == 'rect':
+            self.canvas.coords(self.id, 5, 5, self.x * 2 - 5, self.y * 2 - 5)
+        else:
+            if self.left:
+                self.canvas.coords(self.id, self.deltaX,
+                                   self.y * 2 - self.deltaY)
+            else:
+                self.canvas.coords(self.id, self.x * 2 - self.deltaX,
+                                   self.y * 2 - self.deltaY)
 
 
 class Application(tk.Frame):
@@ -306,7 +340,16 @@ class Application(tk.Frame):
         self.y = (int(self.canvas['height']) - self.panel) // 2
 
     def change_size(self, size):
-        pass
+        size = size if size >= 170 else 170
+        size = size if size <= 300 else 300
+        self.clock_size = size
+        self.canvas['height'] = self.clock_size * 2.5 + self.panel
+        self.canvas['width'] = self.clock_size * 2.5
+        self.calculate_center()
+        root.geometry(f"{self.canvas['width']}x{self.canvas['height']}+0+0")
+
+        for elem in self.elems:
+            elem.do_resize(self.clock_size, self.canvas)
 
     def toggle_sound(self, event):
         self.sound = not self.sound
