@@ -1,7 +1,9 @@
 import tkinter as tk
 import math
-from winsound import PlaySound, SND_FILENAME, SND_ASYNC, SND_LOOP, SND_PURGE
+from winsound import (PlaySound, SND_FILENAME, SND_ASYNC, SND_LOOP, SND_PURGE,
+                      Beep, SND_NODEFAULT)
 import datetime
+import os.path
 
 
 class Element():
@@ -452,7 +454,10 @@ class Application(tk.Frame):
         self.canvas.after(1000, self.do_tick)
 
         if self.sound:
-            PlaySound("tick.wav", SND_FILENAME | SND_ASYNC)
+            if os.path.isfile("tick.wav"):
+                PlaySound("tick.wav", SND_FILENAME | SND_ASYNC | SND_NODEFAULT)
+            else:
+                Beep(350, 60)
 
         if self.alarm and not self.is_alarm:
             test_angle = int(self.arrow4.angle
@@ -462,7 +467,12 @@ class Application(tk.Frame):
                 self.is_alarm = True
 
         if self.is_alarm:
-            PlaySound("alarm.wav", SND_FILENAME | SND_LOOP | SND_ASYNC)
+            if os.path.isfile("alarm.wav"):
+                PlaySound("alarm.wav",
+                          SND_FILENAME | SND_LOOP | SND_ASYNC | SND_NODEFAULT)
+            else:
+                for i in range(4):
+                    Beep(2000, 100)
 
     # --------------------Render method----------------------------
     def render(self):
